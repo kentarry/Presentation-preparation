@@ -517,95 +517,80 @@
     document.getElementById('btn-fs').textContent=document.fullscreenElement?'⛶':'⛶';
   });
 
-  // === Download as PDF ===
+  // === Download as PDF — per-slide screenshot ===
   window.downloadPDF=async function(){
     const btn=document.getElementById('btn-dl');
     btn.textContent='⏳';
     btn.style.pointerEvents='none';
     const origCur=cur;
 
-    // Hide chrome
+    // Hide navigation & toolbar so they don't appear in screenshots
     const navEl=document.querySelector('.nav');
     const toolEl=document.querySelector('.toolbar');
     navEl.style.display='none';
     toolEl.style.display='none';
-    document.querySelectorAll('.bg-orb').forEach(o=>o.style.display='none');
 
     function restore(){
       navEl.style.display='';
       toolEl.style.display='';
-      document.querySelectorAll('.bg-orb').forEach(o=>o.style.display='');
-      // Reset deck layout
-      document.body.style.overflow='';
-      document.body.style.height='';
-      const dk=document.getElementById('deck');
-      dk.style.height=''; dk.style.overflow='';
-      slides.forEach(s=>{
-        s.style.position=''; s.style.opacity=''; s.style.transform='';
-        s.style.pointerEvents=''; s.style.height=''; s.style.minHeight='';
-        s.style.pageBreakAfter=''; s.style.breakAfter='';
-        s.classList.remove('active');
-        s.querySelectorAll('.stg').forEach(el=>{el.style.opacity='';el.style.animation='';});
-      });
       go(origCur);
       btn.textContent='⬇';
       btn.style.pointerEvents='';
     }
 
     try {
-      // Make ALL slides visible and stacked vertically
-      const dk=document.getElementById('deck');
-      dk.style.height='auto';
-      dk.style.overflow='visible';
-      document.body.style.overflow='visible';
-      document.body.style.height='auto';
+      // Get jsPDF constructor from standalone CDN
+      const {jsPDF}=window.jspdf;
+      const pdf=new jsPDF({orientation:'landscape',unit:'px',format:[window.innerWidth,window.innerHeight]});
+      const W=window.innerWidth;
+      const H=window.innerHeight;
 
-      slides.forEach(s=>{
-        s.classList.add('active');
-        s.style.position='relative';
-        s.style.opacity='1';
-        s.style.transform='none';
-        s.style.pointerEvents='auto';
-        s.style.height='100vh';
-        s.style.minHeight='700px';
-        s.style.pageBreakAfter='always';
-        s.style.breakAfter='page';
-        // Force all stagger animations visible
-        s.querySelectorAll('.stg').forEach(el=>{
+      for(let i=0;i<N;i++){
+        // Navigate to this slide (uses the existing go() function)
+        go(i);
+        // Wait for transition + render
+        await new Promise(r=>setTimeout(r,500));
+
+        // Force all stagger-animated elements visible
+        slides[i].querySelectorAll('.stg').forEach(el=>{
           el.style.opacity='1';
           el.style.animation='none';
         });
-      });
+        await new Promise(r=>setTimeout(r,100));
 
-      // Wait for layout + images
-      await new Promise(r=>setTimeout(r,800));
-      window.scrollTo(0,0);
-
-      // Use html2pdf to capture the entire deck
-      await html2pdf().set({
-        margin:0,
-        filename:'Gemini_vs_Antigravity_報告.pdf',
-        image:{type:'jpeg',quality:0.92},
-        html2canvas:{
-          scale:1.5,
+        // Screenshot the current slide element at exact viewport size
+        const canvas=await html2canvas(slides[i],{
+          scale:2,
           useCORS:true,
           allowTaint:true,
           backgroundColor:'#0a0e1a',
-          scrollY:0,
+          width:W,
+          height:H,
           scrollX:0,
-          logging:false
-        },
-        jsPDF:{unit:'mm',format:'a4',orientation:'landscape'},
-        pagebreak:{mode:['css','legacy'],after:'.slide'}
-      }).from(dk).save();
+          scrollY:0,
+          logging:false,
+          imageTimeout:8000
+        });
 
+        // Add page (first page already exists)
+        if(i>0) pdf.addPage([W,H],'landscape');
+        const imgData=canvas.toDataURL('image/jpeg',0.92);
+        pdf.addImage(imgData,'JPEG',0,0,W,H);
+
+        // Reset animation styles
+        slides[i].querySelectorAll('.stg').forEach(el=>{
+          el.style.opacity='';
+          el.style.animation='';
+        });
+      }
+
+      pdf.save('Gemini_vs_Antigravity_報告.pdf');
       restore();
 
     } catch(e){
       console.error('PDF export error:',e);
       restore();
-      alert('PDF 匯出失敗，將改用列印方式。');
-      window.print();
+      alert('PDF 匯出失敗: '+e.message);
     }
   };
 })();

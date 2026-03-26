@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gemini vs Antigravity — AI 工具使用經驗分享</title>
+  <meta name="description" content="Gemini 與 Antigravity 兩大 AI 工具的使用體驗比較">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700;900&family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="https://unpkg.com/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
+  <script src="https://unpkg.com/html2pdf.js@0.10.2/dist/html2pdf.bundle.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-primary: #0a0e1a;
+      --bg-card: rgba(17, 24, 39, 0.72);
+      --bg-glass: rgba(255,255,255,0.04);
+      --text-primary: #f1f5f9;
+      --text-secondary: #b0bec5;
+      --text-muted: #78909c;
+      --blue: #60a5fa;
+      --purple: #a78bfa;
+      --green: #34d399;
+      --amber: #fbbf24;
+      --rose: #fb7185;
+      --border: rgba(255,255,255,0.07);
+      --radius: 18px;
+      --tr: 0.45s cubic-bezier(0.23, 1, 0.32, 1);
+    }
+
+    html { font-size: 18px; scroll-behavior: smooth; }
+    body {
+      font-family: 'Noto Sans TC', 'Inter', system-ui, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      overflow: hidden;
+      height: 100vh; width: 100vw;
+    }
+
+    /* === Background === */
+    .bg-orb { position:fixed; border-radius:50%; filter:blur(120px); opacity:0.25; pointer-events:none; z-index:-1; animation:float 20s ease-in-out infinite alternate; }
+    .bg-orb.o1 { width:500px; height:500px; background:var(--blue); top:-10%; left:-10%; }
+    .bg-orb.o2 { width:600px; height:600px; background:var(--purple); bottom:-15%; right:-10%; animation-delay:-7s; }
+    .bg-orb.o3 { width:350px; height:350px; background:var(--green); top:50%; left:60%; animation-delay:-12s; opacity:0.12; }
+    @keyframes float { 0%{transform:translate(0,0) scale(1);} 100%{transform:translate(40px,-50px) scale(1.08);} }
+
+    /* === Slides === */
+    .deck { position:relative; width:100vw; height:100vh; }
+    .slide {
+      position:absolute; inset:0;
+      display:flex; flex-direction:column; justify-content:center; align-items:center;
+      padding:4vh 6vw;
+      opacity:0; transform:translateY(28px) scale(0.98);
+      pointer-events:none;
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+    .slide.active { opacity:1; transform:translateY(0) scale(1); pointer-events:auto; }
+
+    .slide-inner {
+      display:flex; flex-direction:column; align-items:center; gap:1.4rem;
+      width:100%; max-height:85vh;
+      overflow-y:auto; padding-bottom:4rem;
+    }
+    .slide-inner::-webkit-scrollbar { width:5px; }
+    .slide-inner::-webkit-scrollbar-thumb { background:var(--text-muted); border-radius:5px; }
+
+    /* === Typography === */
+    .slide-label { font-size:0.78rem; font-weight:600; letter-spacing:3px; text-transform:uppercase; color:var(--text-muted); }
+    h1 { font-size:clamp(2.4rem,5.5vw,4rem); font-weight:900; line-height:1.15; letter-spacing:-0.02em; text-align:center; }
+    h2 { font-size:clamp(1.8rem,4vw,2.8rem); font-weight:700; line-height:1.25; text-align:center; }
+    h3 { font-size:clamp(1.15rem,2vw,1.45rem); font-weight:600; }
+    p, li { font-size:clamp(1rem,1.5vw,1.25rem); line-height:1.8; color:var(--text-secondary); }
+    .hl-b { color:var(--blue); } .hl-p { color:var(--purple); } .hl-g { color:var(--green); } .hl-a { color:var(--amber); } .hl-r { color:var(--rose); }
+    .gradient-text { background:linear-gradient(135deg,var(--blue),var(--purple)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+    .subtitle { font-size:clamp(1.1rem,2vw,1.4rem); color:var(--text-secondary); font-weight:400; max-width:750px; text-align:center; }
+    .divider { width:60px; height:3px; background:linear-gradient(90deg,var(--blue),var(--purple)); border-radius:3px; }
+
+    /* === Illustration images === */
+    .illust { width:clamp(200px,28vw,340px); height:auto; border-radius:var(--radius); border:1px solid var(--border); box-shadow:0 8px 32px rgba(0,0,0,0.4); object-fit:cover; }
+    .illust-sm { width:clamp(160px,22vw,270px); height:auto; border-radius:var(--radius); border:1px solid var(--border); box-shadow:0 6px 24px rgba(0,0,0,0.35); object-fit:cover; }
+
+    /* === Cards === */
+    .card { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:1.6rem 2rem; backdrop-filter:blur(16px); transition:var(--tr); }
+    .card:hover { border-color:rgba(255,255,255,0.12); transform:translateY(-2px); box-shadow:0 12px 40px rgba(0,0,0,0.3); }
+
+    .pain-card, .adv-card { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:1.6rem 1.8rem; backdrop-filter:blur(16px); position:relative; overflow:hidden; }
+    .pain-card::before, .adv-card::before { content:''; position:absolute; top:0; left:0; width:4px; height:100%; border-radius:4px 0 0 4px; }
+    .pain-card::before { background:var(--rose); }
+    .adv-card::before { background:var(--green); }
+    .pain-card h3 { color:var(--rose); font-size:1.05rem; margin-bottom:0.4rem; }
+    .adv-card h3 { color:var(--green); font-size:1.05rem; margin-bottom:0.4rem; }
+
+    /* === Layout helpers === */
+    .row { display:flex; align-items:center; gap:2.5rem; width:100%; max-width:1150px; flex-wrap:wrap; justify-content:center; }
+    .row-reverse { flex-direction:row-reverse; }
+    .col { display:flex; flex-direction:column; gap:1.1rem; flex:1; min-width:300px; }
+    .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:1.6rem; width:100%; max-width:1150px; }
+    .grid-3 { display:grid; grid-template-columns:repeat(3,1fr); gap:1.4rem; width:100%; max-width:1150px; }
+
+    /* === Comparison Table === */
+    .cmp-table { width:100%; max-width:1150px; border-collapse:separate; border-spacing:0; border-radius:var(--radius); overflow:hidden; background:var(--bg-card); border:1px solid var(--border); backdrop-filter:blur(16px); }
+    .cmp-table th, .cmp-table td { padding:1rem 1.4rem; text-align:left; border-bottom:1px solid var(--border); font-size:clamp(0.9rem,1.3vw,1.1rem); line-height:1.7; }
+    .cmp-table thead th { background:rgba(255,255,255,0.03); font-weight:700; font-size:clamp(0.95rem,1.4vw,1.15rem); color:var(--text-primary); }
+    .cmp-table thead th:nth-child(2) { color:var(--blue); }
+    .cmp-table thead th:nth-child(3) { color:var(--purple); }
+    .cmp-table tbody tr:last-child td { border-bottom:none; }
+    .cmp-table tbody tr:hover { background:rgba(255,255,255,0.02); }
+    .cmp-table td:first-child { font-weight:600; color:var(--text-primary); white-space:nowrap; }
+
+    /* === Point Cards === */
+    .pt-card { border-radius:var(--radius); padding:2rem; position:relative; overflow:hidden; }
+    .pt-card.gem { background:linear-gradient(135deg,rgba(96,165,250,0.08),rgba(96,165,250,0.02)); border:1px solid rgba(96,165,250,0.15); }
+    .pt-card.ant { background:linear-gradient(135deg,rgba(167,139,250,0.08),rgba(167,139,250,0.02)); border:1px solid rgba(167,139,250,0.15); }
+    .badge { display:inline-block; padding:0.3em 0.9em; border-radius:100px; font-size:0.8rem; font-weight:600; letter-spacing:0.04em; margin-bottom:0.8rem; }
+    .gem .badge { background:rgba(96,165,250,0.15); color:var(--blue); }
+    .ant .badge { background:rgba(167,139,250,0.15); color:var(--purple); }
+    .pt-card ul { list-style:none; padding:0; }
+    .pt-card li { padding:0.4em 0 0.4em 1.5em; position:relative; }
+    .pt-card li::before { content:''; position:absolute; left:0; top:0.85em; width:7px; height:7px; border-radius:50%; }
+    .gem li::before { background:var(--blue); }
+    .ant li::before { background:var(--purple); }
+
+    /* === Conclusion box === */
+    .conclusion-box { background:linear-gradient(135deg,rgba(96,165,250,0.06),rgba(167,139,250,0.06)); border:1px solid rgba(167,139,250,0.15); border-radius:var(--radius); padding:2.2rem 2.8rem; max-width:800px; text-align:center; }
+    .conclusion-box blockquote { font-size:clamp(1.2rem,2.5vw,1.8rem); font-weight:700; color:var(--text-primary); margin-bottom:1rem; line-height:1.45; }
+
+    /* Emoji bullet */
+    .emoji-list { list-style:none; padding:0; }
+    .emoji-list li { padding:0.55em 0; font-size:clamp(1rem,1.5vw,1.2rem); }
+
+    /* VS badge */
+    .vs { width:54px; height:54px; border-radius:50%; background:linear-gradient(135deg,var(--blue),var(--purple)); display:flex; align-items:center; justify-content:center; font-weight:900; font-size:0.9rem; color:#fff; box-shadow:0 0 28px rgba(167,139,250,0.3); }
+
+    /* Reporter badge */
+    .reporter { display:inline-flex; align-items:center; gap:0.5em; padding:0.5em 1.4em; border-radius:100px; background:rgba(167,139,250,0.1); border:1px solid rgba(167,139,250,0.2); font-size:1rem; font-weight:500; color:var(--purple); }
+
+    /* Quote block */
+    .quote-block { display:flex; align-items:center; gap:1rem; background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:1.4rem 2rem; max-width:650px; backdrop-filter:blur(16px); border-left:4px solid var(--purple); }
+    .quote-block p { font-size:clamp(1.05rem,1.6vw,1.25rem); font-style:italic; color:var(--text-secondary); }
+
+    /* Pulse */
+    @keyframes pulse { 0%,100%{box-shadow:0 0 0 0 rgba(167,139,250,0.35);} 50%{box-shadow:0 0 20px 4px rgba(167,139,250,0.12);} }
+    .pulse { animation:pulse 3s ease-in-out infinite; }
+
+    /* Stagger anim */
+    .slide.active .stg { animation:fadeUp 0.5s ease forwards; opacity:0; }
+    .slide.active .stg:nth-child(1){animation-delay:0.08s;}
+    .slide.active .stg:nth-child(2){animation-delay:0.16s;}
+    .slide.active .stg:nth-child(3){animation-delay:0.24s;}
+    .slide.active .stg:nth-child(4){animation-delay:0.32s;}
+    .slide.active .stg:nth-child(5){animation-delay:0.40s;}
+    .slide.active .stg:nth-child(6){animation-delay:0.48s;}
+    .slide.active .stg:nth-child(7){animation-delay:0.56s;}
+    @keyframes fadeUp { from{opacity:0;transform:translateY(18px);} to{opacity:1;transform:translateY(0);} }
+
+    /* === Nav === */
+    .nav { position:fixed; bottom:1.5rem; left:50%; transform:translateX(-50%); display:flex; align-items:center; gap:0.6rem; z-index:100; background:rgba(17,24,39,0.88); backdrop-filter:blur(16px); border:1px solid var(--border); padding:0.5rem 1rem; border-radius:100px; }
+    .nav-dot { width:10px; height:10px; border-radius:50%; background:var(--text-muted); border:none; cursor:pointer; transition:var(--tr); padding:0; }
+    .nav-dot.active { background:var(--purple); box-shadow:0 0 10px rgba(167,139,250,0.4); transform:scale(1.35); }
+    .nav-dot:hover:not(.active) { background:var(--text-secondary); transform:scale(1.15); }
+    .nav-btn { width:36px; height:36px; border-radius:50%; border:1px solid var(--border); background:var(--bg-glass); color:var(--text-secondary); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:1.1rem; transition:var(--tr); }
+    .nav-btn:hover { background:rgba(255,255,255,0.08); color:var(--text-primary); }
+    .nav-btn:disabled { opacity:0.3; cursor:not-allowed; }
+    .pg { font-size:0.78rem; color:var(--text-muted); font-weight:500; min-width:3.8em; text-align:center; }
+
+    /* === Toolbar === */
+    .toolbar { position:fixed; top:1.2rem; right:1.5rem; z-index:100; display:flex; gap:0.5rem; }
+    .tool-btn { width:40px; height:40px; border-radius:12px; border:1px solid var(--border); background:rgba(17,24,39,0.8); backdrop-filter:blur(16px); color:var(--text-secondary); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:1.1rem; transition:var(--tr); }
+    .tool-btn:hover { background:rgba(255,255,255,0.08); color:var(--text-primary); border-color:var(--purple); }
+    .tool-tip { position:relative; }
+    .tool-tip:hover::after { content:attr(aria-label); position:absolute; top:calc(100% + 6px); right:0; background:rgba(17,24,39,0.95); color:var(--text-primary); padding:0.35em 0.7em; border-radius:8px; font-size:0.72rem; white-space:nowrap; pointer-events:none; border:1px solid var(--border); }
+
+    /* === Print / PDF — remove browser headers/footers === */
+    @media print {
+      @page { margin:0; size:landscape; }
+      .bg-orb, .nav, .toolbar { display:none !important; }
+      .slide { position:relative !important; opacity:1 !important; transform:none !important; pointer-events:auto !important;
+        page-break-after:always; break-after:page; height:100vh; padding:5vh 8vw; }
+      body { overflow:visible; }
+      .deck { height:auto; }
+    }
+
+    /* Responsive */
+    @media(max-width:768px){
+      html { font-size:16px; }
+      .grid-2,.grid-3{grid-template-columns:1fr;}
+      .row{flex-direction:column;}
+      .row-reverse{flex-direction:column;}
+      .cmp-table td:first-child{white-space:normal;}
+      .slide{padding:3vh 4vw;}
+    }
+
+    .bounce { display:inline-block; animation:bounce 2s ease infinite; }
+    @keyframes bounce { 0%,100%{transform:translateY(0);} 50%{transform:translateY(-6px);} }
+  </style>
+</head>
+<body>
+
+<div class="bg-orb o1"></div>
+<div class="bg-orb o2"></div>
+<div class="bg-orb o3"></div>
+
+<!-- Toolbar -->
+<div class="toolbar">
+  <button class="tool-btn tool-tip" id="btn-fs" aria-label="全螢幕 (F11)" onclick="toggleFS()">⛶</button>
+  <button class="tool-btn tool-tip" id="btn-dl" aria-label="下載 PDF" onclick="downloadPDF()">⬇</button>
+</div>
+
+<div class="deck" id="deck">
+
+  <!-- ===== SLIDE 1: 封面 ===== -->
+  <section class="slide active" data-slide="0">
+    <div class="slide-inner">
+      <div class="stg slide-label">AI 工具使用經驗分享</div>
+      <img src="images/cover.png" alt="AI 工具比較" class="illust stg">
+      <h1 class="stg">
+        <span class="hl-b">Gemini</span>
+        <span style="color:var(--text-muted); font-weight:400;"> vs. </span>
+        <span class="hl-p">Antigravity</span>
+      </h1>
+      <p class="subtitle stg">兩款主流 AI 開發工具的實際使用比較</p>
+      <div class="reporter stg">👤 報告人：李敏瑞</div>
+    </div>
+  </section>
+
+  <!-- ===== SLIDE 2: 報告目的 ===== -->
+  <section class="slide" data-slide="1">
+    <div class="slide-inner">
+      <div class="stg slide-label">前言</div>
+      <h2 class="stg">報告目的</h2>
+      <div class="divider stg"></div>
+      <div class="row stg">
+        <div class="col" style="max-width:650px;">
+          <ul class="emoji-list">
+            <li>🧪 分享 Gemini 與 Antigravity 的<strong style="color:var(--amber)">實際使用體驗</strong></li>
+            <li>💡 比較兩者在<strong class="hl-b">工作流程</strong>與<strong class="hl-p">開發效率</strong>上的差異</li>
+            <li>💰 評估<strong class="hl-g">點數消耗與成本效益</strong></li>
+          </ul>
+        </div>
+      </div>
+      <div class="quote-block stg">
+        <p>目標：找到最適合團隊工作場景的 AI 工具</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== SLIDE 3: Gemini 概述 ===== -->
+  <section class="slide" data-slide="2">
+    <div class="slide-inner">
+      <div class="stg slide-label">工具介紹 ①</div>
+      <h2 class="stg"><span class="hl-b">Gemini</span> — 指令型 AI 助手</h2>
+      <div class="divider stg"></div>
+      <div class="row stg">
+        <div class="col" style="max-width:580px;">
+          <p>Gemini 屬於<strong class="hl-b">指令驅動型</strong>的 AI 工具，透過對話介面完成任務。</p>
+          <ul class="emoji-list">
+            <li>⚡ 回應速度快，操作介面簡潔</li>
+            <li>📝 適合文案撰寫、資料查詢</li>
+            <li>🎯 產出品質高度依賴<strong class="hl-a">提示詞品質</strong></li>
+          </ul>
+          <div class="card" style="border-left:4px solid var(--amber);">
+            <p>💡 <strong>特點：</strong>使用者需明確定義需求細節與輸出格式，才能獲得精準結果</p>
+          </div>
+        </div>
+        <img src="images/prompt_struggle.png" alt="提示詞工程" class="illust-sm stg">
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== SLIDE 4: Gemini 使用限制 ===== -->
+  <section class="slide" data-slide="3">
+    <div class="slide-inner">
+      <div class="stg slide-label">使用限制</div>
+      <h2 class="stg"><span class="hl-b">Gemini</span> 的主要挑戰</h2>
+      <div class="divider stg"></div>
+      <div class="grid-3 stg">
+        <div class="pain-card">
+          <h3>🗣️ 提示詞門檻高</h3>
+          <p>需撰寫高品質的提示詞，明確定義角色、需求與格式，否則產出容易偏離預期。</p>
+        </div>
+        <div class="pain-card">
+          <h3>🔗 多輪對話效率低</h3>
+          <p>採取一問一答模式，複雜需求需多次往返溝通，隨輪次增加效率遞減。</p>
+        </div>
+        <div class="pain-card">
+          <h3>⚠️ 穩定性風險</h3>
+          <p>長程式碼處理時可能閃退或對話遺失，且存在程式碼被誤改的風險，需手動備份。</p>
+        </div>
+      </div>
+      <img src="images/broken_code.png" alt="穩定性問題" class="illust-sm stg" style="margin-top:0.3rem;">
+    </div>
+  </section>
+
+  <!-- ===== SLIDE 5: Antigravity 概述 ===== -->
+  <section class="slide" data-slide="4">
+    <div class="slide-inner">
+      <div class="stg slide-label">工具介紹 ②</div>
+      <h2 class="stg"><span class="hl-p">Antigravity</span> — 開發型 AI 專家</h2>
+      <div class="divider stg"></div>
+      <div class="row row-reverse stg">
+        <div class="col" style="max-width:580px;">
+          <p>Antigravity 定位為<strong class="hl-p">整合開發環境</strong>，涵蓋程式撰寫、即時預覽與測試驗證。</p>
+          <ul class="emoji-list">
+            <li>🧠 自然語言理解能力強，簡短描述即可辨識意圖</li>
+            <li>🔧 自動推薦工具組合，減少手動操作</li>
+            <li>👁️ 內建即時預覽，修改後立即確認結果</li>
+          </ul>
+          <div class="card" style="border-left:4px solid var(--green);">
+            <p>💡 <strong>特點：</strong>從需求理解到成果交付的完整自動化流程</p>
+          </div>
+        </div>
+        <img src="images/smart_assistant.png" alt="開發型助手" class="illust-sm stg">
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== SLIDE 6: Antigravity 優勢 ===== -->
+  <section class="slide" data-slide="5">
+    <div class="slide-inner">
+      <div class="stg slide-label">核心優勢</div>
+      <h2 class="stg"><span class="hl-p">Antigravity</span> 三大優勢</h2>
+      <div class="divider stg"></div>
+      <div class="grid-3 stg">
+        <div class="adv-card">
+          <h3>🎯 精準意圖辨識</h3>
+          <p>無需撰寫複雜提示詞，即可準確理解需求並主動推薦合適的工具方案。</p>
+        </div>
+        <div class="adv-card">
+          <h3>📋 流程完全透明</h3>
+          <p>每一步的修改內容與原因皆清楚記錄，確保使用者掌握全部變動。</p>
+        </div>
+        <div class="adv-card">
+          <h3>👁️ 即時預覽驗證</h3>
+          <p>內建可視化預覽，支援單一檔案精確修改，避免連帶影響其他部分。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== SLIDE 7: 比較表 ===== -->
+  <section class="slide" data-slide="6">
+    <div class="slide-inner">
+      <div class="stg slide-label">功能比較</div>
+      <h2 class="stg">差異比較表</h2>
+      <div class="vs stg">VS</div>
+      <table class="cmp-table stg">
+        <thead>
+          <tr>
+            <th>比較項目</th>
+            <th>🔵 Gemini</th>
+            <th>🟣 Antigravity</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>提示詞要求</td><td>需撰寫詳細指令</td><td>簡短描述即可理解</td></tr>
+          <tr><td>協作模式</td><td>一問一答，逐次往返</td><td>主動規劃，自動化執行</td></tr>
+          <tr><td>程式碼管理</td><td>有字數限制與誤改風險</td><td>精確微調，完整度高</td></tr>
+          <tr><td>結果驗證</td><td>需手動複製並運行</td><td>內建即時預覽確認</td></tr>
+          <tr><td>操作介面</td><td>聊天對話框</td><td>整合代碼、工具與預覽</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ===== SLIDE 8: 成本分析 ===== -->
+  <section class="slide" data-slide="7">
+    <div class="slide-inner">
+      <div class="stg slide-label">成本分析</div>
+      <h2 class="stg">點數與成本比較</h2>
+      <p class="subtitle stg">不同計費模式對長期使用成本的影響</p>
+      <div class="row stg">
+        <img src="images/cost_compare.png" alt="成本比較" class="illust-sm">
+        <div class="col">
+          <div class="grid-2" style="max-width:100%;">
+            <div class="pt-card gem">
+              <span class="badge">Gemini · 訂閱制</span>
+              <h3 class="hl-b" style="margin-bottom:0.6rem;">月費計費</h3>
+              <ul>
+                <li>固定 Token 使用額度</li>
+                <li>適合一般性查詢與文案</li>
+                <li>大型任務 Token 消耗快</li>
+                <li>容易觸發模型使用限制</li>
+              </ul>
+            </div>
+            <div class="pt-card ant pulse">
+              <span class="badge">Antigravity · 任務導向</span>
+              <h3 class="hl-p" style="margin-bottom:0.6rem;">按需計費</h3>
+              <ul>
+                <li>依任務複雜度計算點數</li>
+                <li>減少反覆修改的額外消耗</li>
+                <li>單次任務完成率高</li>
+                <li>長期開發成本相對較低</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== SLIDE 9: 結論 ===== -->
+  <section class="slide" data-slide="8">
+    <div class="slide-inner">
+      <div class="stg slide-label">結論</div>
+      <h2 class="stg gradient-text" style="font-size:clamp(2rem,4.5vw,3rem);">從「溝通」到「交付」</h2>
+      <div class="divider stg"></div>
+      <div class="row stg">
+        <img src="images/conclusion.png" alt="結論" class="illust-sm">
+        <div class="col" style="max-width:550px;">
+          <div class="conclusion-box" style="max-width:100%; text-align:left; padding:2rem;">
+            <blockquote style="font-size:clamp(1.15rem,2.2vw,1.55rem); text-align:left;">
+              <span class="hl-b">Gemini</span> — 通用型 AI 助手<br>
+              <span class="hl-p">Antigravity</span> — 開發型 AI 夥伴
+            </blockquote>
+            <ul class="emoji-list" style="margin-top:1rem;">
+              <li>📌 資料查詢、文案撰寫 → <strong class="hl-b">Gemini</strong> 能有效勝任</li>
+              <li>📌 工具開發、程式管理 → <strong class="hl-p">Antigravity</strong> 效率更高</li>
+              <li>📌 Antigravity 可<strong class="hl-g">主動建置工具、驗證成果並確保交付品質</strong></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== SLIDE 10: 心得與感謝 ===== -->
+  <section class="slide" data-slide="9">
+    <div class="slide-inner" style="justify-content:center;">
+      <h1 class="stg gradient-text">謝謝聆聽 🙏</h1>
+      <div class="divider stg" style="margin:0 auto;"></div>
+      <div class="quote-block stg" style="max-width:700px; margin-top:1rem;">
+        <p style="font-style:normal;">以上是我從 Gemini 轉換至 <strong class="hl-p">Antigravity</strong> 後的實際使用心得。<br>在工作中，Antigravity 有效減少了來回溝通的時間成本，也降低了程式碼誤改的風險。<br>希望這份報告能作為各位選擇 AI 工具時的參考依據。</p>
+      </div>
+      <div class="stg" style="margin-top:2.5rem;">
+        <div class="reporter">👤 報告人：李敏瑞</div>
+      </div>
+      <p class="stg" style="color:var(--text-muted); font-size:0.9rem; margin-top:1.5rem;">
+        歡迎提問與交流
+      </p>
+    </div>
+  </section>
+
+</div>
+
+<!-- Navigation -->
+<nav class="nav" id="nav">
+  <button class="nav-btn" id="prev" aria-label="上一頁">‹</button>
+  <button class="nav-dot active" data-g="0"></button>
+  <button class="nav-dot" data-g="1"></button>
+  <button class="nav-dot" data-g="2"></button>
+  <button class="nav-dot" data-g="3"></button>
+  <button class="nav-dot" data-g="4"></button>
+  <button class="nav-dot" data-g="5"></button>
+  <button class="nav-dot" data-g="6"></button>
+  <button class="nav-dot" data-g="7"></button>
+  <button class="nav-dot" data-g="8"></button>
+  <button class="nav-dot" data-g="9"></button>
+  <span class="pg" id="pg">1 / 10</span>
+  <button class="nav-btn" id="next" aria-label="下一頁">›</button>
+</nav>
+
+<script>
+(()=>{
+  const slides=document.querySelectorAll('.slide');
+  const dots=document.querySelectorAll('.nav-dot');
+  const prev=document.getElementById('prev');
+  const next=document.getElementById('next');
+  const pg=document.getElementById('pg');
+  const N=slides.length;
+  let cur=0;
+
+  function go(i){
+    if(i<0||i>=N)return;
+    slides[cur].classList.remove('active');
+    dots[cur].classList.remove('active');
+    cur=i;
+    slides[cur].classList.add('active');
+    dots[cur].classList.add('active');
+    pg.textContent=`${cur+1} / ${N}`;
+    prev.disabled=cur===0;
+    next.disabled=cur===N-1;
+  }
+
+  prev.addEventListener('click',()=>go(cur-1));
+  next.addEventListener('click',()=>go(cur+1));
+  dots.forEach(d=>d.addEventListener('click',()=>go(+d.dataset.g)));
+
+  document.addEventListener('keydown',e=>{
+    if(e.key==='ArrowRight'||e.key===' '){e.preventDefault();go(cur+1);}
+    if(e.key==='ArrowLeft'){e.preventDefault();go(cur-1);}
+    if(e.key==='Home'){e.preventDefault();go(0);}
+    if(e.key==='End'){e.preventDefault();go(N-1);}
+    if(e.key==='F11'){e.preventDefault();toggleFS();}
+  });
+
+  let tx=0;
+  document.getElementById('deck').addEventListener('touchstart',e=>{tx=e.changedTouches[0].clientX;},{passive:true});
+  document.getElementById('deck').addEventListener('touchend',e=>{
+    const dx=e.changedTouches[0].clientX-tx;
+    if(Math.abs(dx)>50) dx>0?go(cur-1):go(cur+1);
+  },{passive:true});
+
+  prev.disabled=true;
+
+  // === Fullscreen ===
+  window.toggleFS=function(){
+    if(!document.fullscreenElement){
+      document.documentElement.requestFullscreen().catch(()=>{});
+    } else {
+      document.exitFullscreen().catch(()=>{});
+    }
+  };
+  document.addEventListener('fullscreenchange',()=>{
+    document.getElementById('btn-fs').textContent=document.fullscreenElement?'⛶':'⛶';
+  });
+
+  // === Download as PDF ===
+  window.downloadPDF=async function(){
+    const btn=document.getElementById('btn-dl');
+    btn.textContent='⏳';
+    btn.style.pointerEvents='none';
+    const origCur=cur;
+
+    // Hide chrome
+    const navEl=document.querySelector('.nav');
+    const toolEl=document.querySelector('.toolbar');
+    navEl.style.display='none';
+    toolEl.style.display='none';
+    document.querySelectorAll('.bg-orb').forEach(o=>o.style.display='none');
+
+    function restore(){
+      navEl.style.display='';
+      toolEl.style.display='';
+      document.querySelectorAll('.bg-orb').forEach(o=>o.style.display='');
+      // Reset deck layout
+      document.body.style.overflow='';
+      document.body.style.height='';
+      const dk=document.getElementById('deck');
+      dk.style.height=''; dk.style.overflow='';
+      slides.forEach(s=>{
+        s.style.position=''; s.style.opacity=''; s.style.transform='';
+        s.style.pointerEvents=''; s.style.height=''; s.style.minHeight='';
+        s.style.pageBreakAfter=''; s.style.breakAfter='';
+        s.classList.remove('active');
+        s.querySelectorAll('.stg').forEach(el=>{el.style.opacity='';el.style.animation='';});
+      });
+      go(origCur);
+      btn.textContent='⬇';
+      btn.style.pointerEvents='';
+    }
+
+    try {
+      // Make ALL slides visible and stacked vertically
+      const dk=document.getElementById('deck');
+      dk.style.height='auto';
+      dk.style.overflow='visible';
+      document.body.style.overflow='visible';
+      document.body.style.height='auto';
+
+      slides.forEach(s=>{
+        s.classList.add('active');
+        s.style.position='relative';
+        s.style.opacity='1';
+        s.style.transform='none';
+        s.style.pointerEvents='auto';
+        s.style.height='100vh';
+        s.style.minHeight='700px';
+        s.style.pageBreakAfter='always';
+        s.style.breakAfter='page';
+        // Force all stagger animations visible
+        s.querySelectorAll('.stg').forEach(el=>{
+          el.style.opacity='1';
+          el.style.animation='none';
+        });
+      });
+
+      // Wait for layout + images
+      await new Promise(r=>setTimeout(r,800));
+      window.scrollTo(0,0);
+
+      // Use html2pdf to capture the entire deck
+      await html2pdf().set({
+        margin:0,
+        filename:'Gemini_vs_Antigravity_報告.pdf',
+        image:{type:'jpeg',quality:0.92},
+        html2canvas:{
+          scale:1.5,
+          useCORS:true,
+          allowTaint:true,
+          backgroundColor:'#0a0e1a',
+          scrollY:0,
+          scrollX:0,
+          logging:false
+        },
+        jsPDF:{unit:'mm',format:'a4',orientation:'landscape'},
+        pagebreak:{mode:['css','legacy'],after:'.slide'}
+      }).from(dk).save();
+
+      restore();
+
+    } catch(e){
+      console.error('PDF export error:',e);
+      restore();
+      alert('PDF 匯出失敗，將改用列印方式。');
+      window.print();
+    }
+  };
+})();
+</script>
+</body>
+</html>
